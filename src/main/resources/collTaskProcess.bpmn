@@ -11,7 +11,7 @@
       <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
     <bpmn2:sequenceFlow id="SequenceFlow_2" name="" sourceRef="ExclusiveGateway_1" targetRef="chooseFreeOrDelegated"/>
-    <bpmn2:userTask id="chooseFreeOrDelegated" name="'Freier' oder 'delegierter' Task?">
+    <bpmn2:userTask id="chooseFreeOrDelegated" camunda:candidateGroups="lead" name="'Freier' oder 'delegierter' Task?">
       <bpmn2:extensionElements>
         <camunda:formData>
           <camunda:formField id="taskName" label="Taskname" type="string">
@@ -19,11 +19,7 @@
               <camunda:constraint name="readonly"/>
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="isFreeTask" label="Ist dies ein freier Task?" type="boolean">
-            <camunda:validation>
-              <camunda:constraint name="required"/>
-            </camunda:validation>
-          </camunda:formField>
+          <camunda:formField id="isFreeTask" label="Ist dies ein freier Task?" type="boolean"/>
         </camunda:formData>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
@@ -36,7 +32,7 @@
     <bpmn2:endEvent id="EndEvent_1">
       <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
     </bpmn2:endEvent>
-    <bpmn2:userTask id="choosePerson" name="Person auswählen">
+    <bpmn2:userTask id="choosePerson" camunda:candidateGroups="lead" name="Person auswählen">
       <bpmn2:extensionElements>
         <camunda:formData>
           <camunda:formField id="taskName" label="Taskname" type="string">
@@ -46,20 +42,17 @@
           </camunda:formField>
           <camunda:formField id="choosePersonFromList" label="Task folgender Person zuweisen:" type="enum">
             <camunda:value id="requestor" name="Ersteller"/>
-            <camunda:value id="test" name="testUser"/>
+            <camunda:value id="mary" name="Mary Anne"/>
+            <camunda:value id="peter" name="Peter Meter"/>
           </camunda:formField>
         </camunda:formData>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
-      <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
     </bpmn2:userTask>
     <bpmn2:sequenceFlow id="SequenceFlow_5" name="nein" sourceRef="ExclusiveGateway_2" targetRef="choosePerson">
       <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${not isFreeTask}</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
-    <bpmn2:endEvent id="EndEvent_2">
-      <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
-    </bpmn2:endEvent>
-    <bpmn2:sequenceFlow id="SequenceFlow_6" name="" sourceRef="choosePerson" targetRef="EndEvent_2"/>
     <bpmn2:startEvent id="addNewTask" camunda:initiator="requestor" name="Neuen Task aufnehmen">
       <bpmn2:extensionElements>
         <camunda:formData>
@@ -80,13 +73,40 @@
       <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
     </bpmn2:startEvent>
     <bpmn2:sequenceFlow id="SequenceFlow_1" name="" sourceRef="addNewTask" targetRef="ExclusiveGateway_1"/>
+    <bpmn2:userTask id="workOnTask" name="Task bearbeiten">
+      <bpmn2:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="taskname" label="Taskname" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="comment" label="Kommentar" type="string"/>
+          <camunda:formField id="isFinished" label="Task erledigt?" type="boolean">
+            <camunda:validation>
+              <camunda:constraint name="required"/>
+            </camunda:validation>
+          </camunda:formField>
+        </camunda:formData>
+        <camunda:taskListener event="create">
+          <camunda:script scriptFormat="javascript">task.setAssignee(task.getVariable('choosePersonFromList'));</camunda:script>
+        </camunda:taskListener>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SequenceFlow_7" name="" sourceRef="choosePerson" targetRef="workOnTask"/>
+    <bpmn2:endEvent id="EndEvent_3">
+      <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="SequenceFlow_8" name="" sourceRef="workOnTask" targetRef="EndEvent_3"/>
   </bpmn2:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collTaskProcess">
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_6" bpmnElement="addNewTask">
-        <dc:Bounds height="36.0" width="36.0" x="252.0" y="245.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="264.0" y="252.0"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds height="21.0" width="156.0" x="192.0" y="286.0"/>
+          <dc:Bounds height="21.0" width="156.0" x="204.0" y="293.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="_BPMNShape_ExclusiveGateway_5" bpmnElement="ExclusiveGateway_1" isMarkerVisible="true">
@@ -96,12 +116,10 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1" sourceElement="_BPMNShape_StartEvent_6" targetElement="_BPMNShape_ExclusiveGateway_5">
-        <di:waypoint xsi:type="dc:Point" x="288.0" y="263.0"/>
-        <di:waypoint xsi:type="dc:Point" x="301.0" y="263.0"/>
-        <di:waypoint xsi:type="dc:Point" x="301.0" y="269.0"/>
+        <di:waypoint xsi:type="dc:Point" x="300.0" y="270.0"/>
         <di:waypoint xsi:type="dc:Point" x="396.0" y="269.0"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds height="6.0" width="6.0" x="340.0" y="269.0"/>
+          <dc:Bounds height="6.0" width="6.0" x="358.0" y="269.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="_BPMNShape_UserTask_2" bpmnElement="chooseFreeOrDelegated">
@@ -147,12 +165,19 @@
         <di:waypoint xsi:type="dc:Point" x="740.0" y="270.0"/>
         <di:waypoint xsi:type="dc:Point" x="790.0" y="270.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_8" bpmnElement="EndEvent_2">
-        <dc:Bounds height="36.0" width="36.0" x="940.0" y="252.0"/>
+      <bpmndi:BPMNShape id="_BPMNShape_UserTask_4" bpmnElement="workOnTask">
+        <dc:Bounds height="80.0" width="100.0" x="940.0" y="230.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6" sourceElement="_BPMNShape_UserTask_3" targetElement="_BPMNShape_EndEvent_8">
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7" sourceElement="_BPMNShape_UserTask_3" targetElement="_BPMNShape_UserTask_4">
         <di:waypoint xsi:type="dc:Point" x="890.0" y="270.0"/>
         <di:waypoint xsi:type="dc:Point" x="940.0" y="270.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_9" bpmnElement="EndEvent_3">
+        <dc:Bounds height="36.0" width="36.0" x="1090.0" y="252.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_8" bpmnElement="SequenceFlow_8" sourceElement="_BPMNShape_UserTask_4" targetElement="_BPMNShape_EndEvent_9">
+        <di:waypoint xsi:type="dc:Point" x="1040.0" y="270.0"/>
+        <di:waypoint xsi:type="dc:Point" x="1090.0" y="270.0"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
