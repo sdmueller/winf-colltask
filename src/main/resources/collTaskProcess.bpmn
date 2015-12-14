@@ -9,14 +9,17 @@
         <bpmn2:flowNodeRef>ExclusiveGateway_2</bpmn2:flowNodeRef>
         <bpmn2:flowNodeRef>ExclusiveGateway_1</bpmn2:flowNodeRef>
         <bpmn2:flowNodeRef>chooseFreeOrDelegated</bpmn2:flowNodeRef>
-        <bpmn2:flowNodeRef>EndEvent_1</bpmn2:flowNodeRef>
         <bpmn2:flowNodeRef>choosePerson</bpmn2:flowNodeRef>
         <bpmn2:flowNodeRef>addNewTask</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>checkPostponement</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_1</bpmn2:flowNodeRef>
       </bpmn2:lane>
       <bpmn2:lane id="Lane_3" name="Angestellter">
         <bpmn2:flowNodeRef>workOnTask</bpmn2:flowNodeRef>
         <bpmn2:flowNodeRef>ExclusiveGateway_3</bpmn2:flowNodeRef>
         <bpmn2:flowNodeRef>EndEvent_2</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>postponeTask</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>ExclusiveGateway_4</bpmn2:flowNodeRef>
       </bpmn2:lane>
     </bpmn2:laneSet>
     <bpmn2:exclusiveGateway id="ExclusiveGateway_2" name="Task delegiert?">
@@ -51,14 +54,15 @@
           </camunda:formField>
           <camunda:formField id="isDelegated" label="Task delegieren?" type="boolean"/>
         </camunda:formData>
+        <camunda:taskListener event="create">
+          <camunda:script scriptFormat="javascript"><![CDATA[task.setDueDate(task.getVariable('deadline'));
+task.setVariable('allowPostponement', false);]]></camunda:script>
+        </camunda:taskListener>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
     </bpmn2:userTask>
     <bpmn2:sequenceFlow id="SequenceFlow_3" name="" sourceRef="chooseFreeOrDelegated" targetRef="ExclusiveGateway_2"/>
-    <bpmn2:endEvent id="EndEvent_1">
-      <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
-    </bpmn2:endEvent>
     <bpmn2:userTask id="choosePerson" camunda:candidateGroups="lead" name="Person auswählen">
       <bpmn2:extensionElements>
         <camunda:formData>
@@ -81,11 +85,13 @@
             <camunda:value id="peter" name="Peter Meter"/>
           </camunda:formField>
         </camunda:formData>
+        <camunda:taskListener event="create">
+          <camunda:script scriptFormat="javascript">task.setDueDate(task.getVariable('deadline'));</camunda:script>
+        </camunda:taskListener>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
-      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_11</bpmn2:outgoing>
     </bpmn2:userTask>
-    <bpmn2:sequenceFlow id="SequenceFlow_7" name="" sourceRef="choosePerson" targetRef="workOnTask"/>
     <bpmn2:startEvent id="addNewTask" camunda:initiator="requestor" name="Neuen Task aufnehmen">
       <bpmn2:extensionElements>
         <camunda:formData>
@@ -96,6 +102,11 @@
             </camunda:validation>
           </camunda:formField>
           <camunda:formField id="taskDescription" label="Beschreibung" type="string"/>
+          <camunda:formField id="deadline" label="Deadline" type="date">
+            <camunda:validation>
+              <camunda:constraint name="required"/>
+            </camunda:validation>
+          </camunda:formField>
         </camunda:formData>
       </bpmn2:extensionElements>
       <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
@@ -104,7 +115,8 @@
     <bpmn2:userTask id="workOnTask" name="Task bearbeiten">
       <bpmn2:extensionElements>
         <camunda:taskListener event="create">
-          <camunda:script scriptFormat="javascript">task.setAssignee(task.getVariable('choosePersonFromList'));</camunda:script>
+          <camunda:script scriptFormat="javascript"><![CDATA[task.setAssignee(task.getVariable('choosePersonFromList'));
+]]></camunda:script>
         </camunda:taskListener>
         <camunda:formData>
           <camunda:formField id="taskName" label="Taskname" type="string">
@@ -124,17 +136,19 @@
             </camunda:validation>
             <camunda:value id="reject" name="Task zurückweisen"/>
             <camunda:value id="finished" name="Task als beendet markieren"/>
-            <camunda:value id="postpone" name="Task verschieben (nicht implementiert)"/>
+            <camunda:value id="postpone" name="Task verschieben"/>
           </camunda:formField>
         </camunda:formData>
+        <camunda:taskListener class="colltask.assignments.CustomAssignmentHandler" event="create"/>
       </bpmn2:extensionElements>
-      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_12</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
     </bpmn2:userTask>
     <bpmn2:exclusiveGateway id="ExclusiveGateway_3" name="Entscheidung?">
       <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_9</bpmn2:outgoing>
       <bpmn2:outgoing>SequenceFlow_10</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
     <bpmn2:sequenceFlow id="SequenceFlow_6" name="" sourceRef="workOnTask" targetRef="ExclusiveGateway_3"/>
     <bpmn2:endEvent id="EndEvent_2">
@@ -146,6 +160,90 @@
     <bpmn2:sequenceFlow id="SequenceFlow_10" name="Task zurückgewiesen" sourceRef="ExclusiveGateway_3" targetRef="ExclusiveGateway_1">
       <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"><![CDATA[${chooseAction.equals("reject")}]]></bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
+    <bpmn2:userTask id="postponeTask" name="Task verschieben">
+      <bpmn2:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="taskName" label="Taskname" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="taskDescription" label="Beschreibung" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="comment" label="Kommentar" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="postponeDate" label="Verschieben auf" type="date">
+            <camunda:validation>
+              <camunda:constraint name="required"/>
+            </camunda:validation>
+          </camunda:formField>
+        </camunda:formData>
+        <camunda:taskListener event="create">
+          <camunda:script scriptFormat="javascript"><![CDATA[task.setAssignee(task.getVariable('choosePersonFromList'));
+task.setDueDate(task.getVariable('deadline'));]]></camunda:script>
+        </camunda:taskListener>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_13</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SequenceFlow_8" name="Task verschieben" sourceRef="ExclusiveGateway_3" targetRef="postponeTask">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"><![CDATA[${chooseAction.equals("postpone")}]]></bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_11" name="" sourceRef="choosePerson" targetRef="ExclusiveGateway_4"/>
+    <bpmn2:exclusiveGateway id="ExclusiveGateway_4">
+      <bpmn2:incoming>SequenceFlow_11</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_14</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_12</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="SequenceFlow_12" name="" sourceRef="ExclusiveGateway_4" targetRef="workOnTask"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_13" name="" sourceRef="postponeTask" targetRef="checkPostponement"/>
+    <bpmn2:userTask id="checkPostponement" camunda:candidateGroups="lead" name="Verschiebung überprüfen">
+      <bpmn2:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="taskName" label="Taskname" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="taskDescription" label="Beschreibung" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="comment" label="Kommentar" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="postponeDate" label="Verschiebungsdatum" type="date">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="choosePersonFromList" label="Antragsteller" type="string">
+            <camunda:validation>
+              <camunda:constraint name="readonly"/>
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="allowPostponement" label="Verschiebung erlauben" type="boolean"/>
+        </camunda:formData>
+        <camunda:taskListener event="create">
+          <camunda:script scriptFormat="javascript">task.setDueDate(task.getVariable('deadline'));</camunda:script>
+        </camunda:taskListener>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>SequenceFlow_13</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_14</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:sequenceFlow id="SequenceFlow_14" name="" sourceRef="checkPostponement" targetRef="ExclusiveGateway_4"/>
+    <bpmn2:endEvent id="EndEvent_1">
+      <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
+    </bpmn2:endEvent>
   </bpmn2:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="_Collaboration_2">
@@ -192,16 +290,16 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="_BPMNShape_EndEvent_7" bpmnElement="EndEvent_1">
-        <dc:Bounds height="36.0" width="36.0" x="697.0" y="36.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="698.0" y="48.0"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds height="0.0" width="0.0" x="715.0" y="108.0"/>
+          <dc:Bounds height="0.0" width="0.0" x="716.0" y="120.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4" sourceElement="_BPMNShape_ExclusiveGateway_6" targetElement="_BPMNShape_EndEvent_7">
         <di:waypoint xsi:type="dc:Point" x="715.0" y="113.0"/>
-        <di:waypoint xsi:type="dc:Point" x="715.0" y="72.0"/>
+        <di:waypoint xsi:type="dc:Point" x="716.0" y="84.0"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds height="21.0" width="17.0" x="707.0" y="108.0"/>
+          <dc:Bounds height="21.0" width="33.0" x="699.0" y="108.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="_BPMNShape_UserTask_3" bpmnElement="choosePerson">
@@ -217,18 +315,6 @@
       <bpmndi:BPMNShape id="_BPMNShape_UserTask_4" bpmnElement="workOnTask">
         <dc:Bounds height="80.0" width="100.0" x="492.0" y="444.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7" sourceElement="_BPMNShape_UserTask_3" targetElement="_BPMNShape_UserTask_4">
-        <di:waypoint xsi:type="dc:Point" x="890.0" y="138.0"/>
-        <di:waypoint xsi:type="dc:Point" x="960.0" y="138.0"/>
-        <di:waypoint xsi:type="dc:Point" x="960.0" y="277.0"/>
-        <di:waypoint xsi:type="dc:Point" x="401.0" y="277.0"/>
-        <di:waypoint xsi:type="dc:Point" x="401.0" y="386.0"/>
-        <di:waypoint xsi:type="dc:Point" x="401.0" y="484.0"/>
-        <di:waypoint xsi:type="dc:Point" x="492.0" y="484.0"/>
-        <bpmndi:BPMNLabel>
-          <dc:Bounds height="6.0" width="6.0" x="912.0" y="138.0"/>
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="_BPMNShape_Participant_2" bpmnElement="_Participant_2" isHorizontal="true">
         <dc:Bounds height="613.0" width="1177.0" x="132.0" y="0.0"/>
       </bpmndi:BPMNShape>
@@ -273,6 +359,62 @@
         <di:waypoint xsi:type="dc:Point" x="421.0" y="162.0"/>
         <bpmndi:BPMNLabel>
           <dc:Bounds height="6.0" width="6.0" x="440.0" y="556.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_UserTask_5" bpmnElement="postponeTask">
+        <dc:Bounds height="80.0" width="100.0" x="888.0" y="348.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_8" bpmnElement="SequenceFlow_8" sourceElement="_BPMNShape_ExclusiveGateway_7" targetElement="_BPMNShape_UserTask_5">
+        <di:waypoint xsi:type="dc:Point" x="667.0" y="459.0"/>
+        <di:waypoint xsi:type="dc:Point" x="667.0" y="388.0"/>
+        <di:waypoint xsi:type="dc:Point" x="790.0" y="388.0"/>
+        <di:waypoint xsi:type="dc:Point" x="888.0" y="388.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds height="6.0" width="6.0" x="739.0" y="388.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_ExclusiveGateway_8" bpmnElement="ExclusiveGateway_4" isMarkerVisible="true">
+        <dc:Bounds height="50.0" width="50.0" x="408.0" y="362.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds height="0.0" width="0.0" x="433.0" y="417.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_11" bpmnElement="SequenceFlow_11" sourceElement="_BPMNShape_UserTask_3" targetElement="_BPMNShape_ExclusiveGateway_8">
+        <di:waypoint xsi:type="dc:Point" x="890.0" y="138.0"/>
+        <di:waypoint xsi:type="dc:Point" x="976.0" y="137.0"/>
+        <di:waypoint xsi:type="dc:Point" x="976.0" y="230.0"/>
+        <di:waypoint xsi:type="dc:Point" x="433.0" y="230.0"/>
+        <di:waypoint xsi:type="dc:Point" x="433.0" y="362.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds height="6.0" width="6.0" x="912.0" y="138.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_12" bpmnElement="SequenceFlow_12" sourceElement="_BPMNShape_ExclusiveGateway_8" targetElement="_BPMNShape_UserTask_4">
+        <di:waypoint xsi:type="dc:Point" x="433.0" y="412.0"/>
+        <di:waypoint xsi:type="dc:Point" x="433.0" y="484.0"/>
+        <di:waypoint xsi:type="dc:Point" x="492.0" y="484.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_UserTask_6" bpmnElement="checkPostponement">
+        <dc:Bounds height="80.0" width="100.0" x="1104.0" y="163.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_13" bpmnElement="SequenceFlow_13" sourceElement="_BPMNShape_UserTask_5" targetElement="_BPMNShape_UserTask_6">
+        <di:waypoint xsi:type="dc:Point" x="988.0" y="388.0"/>
+        <di:waypoint xsi:type="dc:Point" x="1263.0" y="388.0"/>
+        <di:waypoint xsi:type="dc:Point" x="1263.0" y="203.0"/>
+        <di:waypoint xsi:type="dc:Point" x="1204.0" y="203.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds height="6.0" width="6.0" x="1010.0" y="388.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_14" bpmnElement="SequenceFlow_14" sourceElement="_BPMNShape_UserTask_6" targetElement="_BPMNShape_ExclusiveGateway_8">
+        <di:waypoint xsi:type="dc:Point" x="1104.0" y="203.0"/>
+        <di:waypoint xsi:type="dc:Point" x="1039.0" y="203.0"/>
+        <di:waypoint xsi:type="dc:Point" x="1039.0" y="270.0"/>
+        <di:waypoint xsi:type="dc:Point" x="572.0" y="270.0"/>
+        <di:waypoint xsi:type="dc:Point" x="572.0" y="387.0"/>
+        <di:waypoint xsi:type="dc:Point" x="458.0" y="387.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds height="6.0" width="6.0" x="761.0" y="339.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
