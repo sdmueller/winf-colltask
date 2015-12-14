@@ -56,7 +56,14 @@
         </camunda:formData>
         <camunda:taskListener event="create">
           <camunda:script scriptFormat="javascript"><![CDATA[task.setDueDate(task.getVariable('deadline'));
-task.setVariable('allowPostponement', false);]]></camunda:script>
+task.setVariable('allowPostponement', false);
+if(task.getVariable('taskPriority')=='hoch') {
+	task.setPriority(60);
+}else if((task.getVariable('taskPriority')=='mittel')){
+	task.setPriority(50);
+}else if((task.getVariable('taskPriority')=='tief')){
+	task.setPriority(40);
+}]]></camunda:script>
         </camunda:taskListener>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
@@ -106,6 +113,14 @@ task.setVariable('allowPostponement', false);]]></camunda:script>
             <camunda:validation>
               <camunda:constraint name="required"/>
             </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="taskPriority" label="Priorität" type="enum">
+            <camunda:validation>
+              <camunda:constraint name="required"/>
+            </camunda:validation>
+            <camunda:value id="hoch" name="hoch"/>
+            <camunda:value id="mittel" name="mittel"/>
+            <camunda:value id="tief" name="tief"/>
           </camunda:formField>
         </camunda:formData>
       </bpmn2:extensionElements>
