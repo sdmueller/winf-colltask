@@ -10,11 +10,11 @@ public class CustomAssignmentHandler implements TaskListener {
 //	private static String chosenUser = "";
 
 	public void notify(DelegateTask delegateTask) {
-		
+//		
 //		String taskId = delegateTask.getId();
 //		
 //		if(taskId.equals("choosePerson")) {
-//			chosenUser = (String)delegateTask.getVariable("choosePersonFromList");
+//			chosenUser = (String)delegateTask.getVariable("requestor");
 //		} else if(taskId.equals("workOnTask")) {
 //			delegateTask.setAssignee(chosenUser);
 //		} else {

@@ -87,7 +87,7 @@ if(task.getVariable('taskPriority')=='hoch') {
             <camunda:validation>
               <camunda:constraint name="required"/>
             </camunda:validation>
-            <camunda:value id="requestor" name="Ersteller"/>
+            <camunda:value id="demo" name="Demo Demo"/>
             <camunda:value id="mary" name="Mary Anne"/>
             <camunda:value id="peter" name="Peter Meter"/>
           </camunda:formField>
