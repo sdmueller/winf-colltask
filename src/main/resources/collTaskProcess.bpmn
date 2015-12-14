@@ -39,7 +39,7 @@
       <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
     <bpmn2:sequenceFlow id="SequenceFlow_2" name="" sourceRef="ExclusiveGateway_1" targetRef="chooseFreeOrDelegated"/>
-    <bpmn2:userTask id="chooseFreeOrDelegated" camunda:candidateGroups="lead" name="'Freier' oder 'delegierter' Task?">
+    <bpmn2:userTask id="chooseFreeOrDelegated" camunda:candidateGroups="lead" camunda:assignee="${requestor}" name="'Freier' oder 'delegierter' Task?">
       <bpmn2:extensionElements>
         <camunda:formData>
           <camunda:formField id="taskName" label="Taskname" type="string">
@@ -70,7 +70,7 @@ if(task.getVariable('taskPriority')=='hoch') {
       <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
     </bpmn2:userTask>
     <bpmn2:sequenceFlow id="SequenceFlow_3" name="" sourceRef="chooseFreeOrDelegated" targetRef="ExclusiveGateway_2"/>
-    <bpmn2:userTask id="choosePerson" camunda:candidateGroups="lead" name="Person auswählen">
+    <bpmn2:userTask id="choosePerson" camunda:candidateGroups="lead" camunda:assignee="${requestor}" name="Person auswählen">
       <bpmn2:extensionElements>
         <camunda:formData>
           <camunda:formField id="taskName" label="Taskname" type="string">
@@ -93,7 +93,14 @@ if(task.getVariable('taskPriority')=='hoch') {
           </camunda:formField>
         </camunda:formData>
         <camunda:taskListener event="create">
-          <camunda:script scriptFormat="javascript">task.setDueDate(task.getVariable('deadline'));</camunda:script>
+          <camunda:script scriptFormat="javascript"><![CDATA[task.setDueDate(task.getVariable('deadline'));
+if(task.getVariable('taskPriority')=='hoch') {
+	task.setPriority(60);
+}else if((task.getVariable('taskPriority')=='mittel')){
+	task.setPriority(50);
+}else if((task.getVariable('taskPriority')=='tief')){
+	task.setPriority(40);
+}]]></camunda:script>
         </camunda:taskListener>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
@@ -131,6 +138,13 @@ if(task.getVariable('taskPriority')=='hoch') {
       <bpmn2:extensionElements>
         <camunda:taskListener event="create">
           <camunda:script scriptFormat="javascript"><![CDATA[task.setAssignee(task.getVariable('choosePersonFromList'));
+if(task.getVariable('taskPriority')=='hoch') {
+	task.setPriority(60);
+}else if((task.getVariable('taskPriority')=='mittel')){
+	task.setPriority(50);
+}else if((task.getVariable('taskPriority')=='tief')){
+	task.setPriority(40);
+}
 ]]></camunda:script>
         </camunda:taskListener>
         <camunda:formData>
@@ -201,7 +215,14 @@ if(task.getVariable('taskPriority')=='hoch') {
         </camunda:formData>
         <camunda:taskListener event="create">
           <camunda:script scriptFormat="javascript"><![CDATA[task.setAssignee(task.getVariable('choosePersonFromList'));
-task.setDueDate(task.getVariable('deadline'));]]></camunda:script>
+task.setDueDate(task.getVariable('deadline'));
+if(task.getVariable('taskPriority')=='hoch') {
+	task.setPriority(60);
+}else if((task.getVariable('taskPriority')=='mittel')){
+	task.setPriority(50);
+}else if((task.getVariable('taskPriority')=='tief')){
+	task.setPriority(40);
+}]]></camunda:script>
         </camunda:taskListener>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
@@ -249,7 +270,14 @@ task.setDueDate(task.getVariable('deadline'));]]></camunda:script>
           <camunda:formField id="allowPostponement" label="Verschiebung erlauben" type="boolean"/>
         </camunda:formData>
         <camunda:taskListener event="create">
-          <camunda:script scriptFormat="javascript">task.setDueDate(task.getVariable('deadline'));</camunda:script>
+          <camunda:script scriptFormat="javascript"><![CDATA[task.setDueDate(task.getVariable('deadline'));
+if(task.getVariable('taskPriority')=='hoch') {
+	task.setPriority(60);
+}else if((task.getVariable('taskPriority')=='mittel')){
+	task.setPriority(50);
+}else if((task.getVariable('taskPriority')=='tief')){
+	task.setPriority(40);
+}]]></camunda:script>
         </camunda:taskListener>
       </bpmn2:extensionElements>
       <bpmn2:incoming>SequenceFlow_13</bpmn2:incoming>
